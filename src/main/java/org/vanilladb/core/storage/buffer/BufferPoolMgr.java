@@ -124,14 +124,14 @@ class BufferPoolMgr {
 				int currBlk = (lastReplacedBuff + 1) % bufferPool.length;
 				while (currBlk != lastReplacedBuff) {
 					buff = bufferPool[currBlk];
-					
+
 					// Get the lock of buffer if it is free
 					if (buff.getExternalLock().tryLock()) {
 						try {
 							// Check if there is no one use it
 							if (!buff.isPinned()) {
 								this.lastReplacedBuff = currBlk;
-								
+								//System.out.println("Last Buf" + this.lastReplacedBuff);
 								// Swap
 								BlockId oldBlk = buff.block();
 								if (oldBlk != null)
@@ -140,7 +140,7 @@ class BufferPoolMgr {
 								blockMap.put(blk, buff);
 								if (!buff.isPinned())
 									numAvailable.decrementAndGet();
-								
+
 								// Pin this buffer
 								buff.pin();
 								return buff;
@@ -153,14 +153,15 @@ class BufferPoolMgr {
 					currBlk = (currBlk + 1) % bufferPool.length;
 				}
 				return null;
-				
-			// If it exists
+
+				// If it exists
 			} else {
 				// Get the lock of buffer
 				buff.getExternalLock().lock();
-				
+
 				try {
-					// Check its block id before pinning since it might be swapped
+					// Check its block id before pinning since it might be
+					// swapped
 					if (buff.block().equals(blk)) {
 						if (!buff.isPinned())
 							numAvailable.decrementAndGet();
@@ -168,7 +169,7 @@ class BufferPoolMgr {
 						return buff;
 					}
 					return pin(blk);
-					
+
 				} finally {
 					// Release the lock of buffer
 					buff.getExternalLock().unlock();
@@ -189,21 +190,23 @@ class BufferPoolMgr {
 	 * @return the pinned buffer
 	 */
 	Buffer pinNew(String fileName, PageFormatter fmtr) {
-		// Only the txs acquiring to append the block on the same file will be blocked
+		// Only the txs acquiring to append the block on the same file will be
+		// blocked
 		synchronized (prepareAnchor(fileName)) {
-			
+
 			// Choose Unpinned Buffer
 			int lastReplacedBuff = this.lastReplacedBuff;
 			int currBlk = (lastReplacedBuff + 1) % bufferPool.length;
 			while (currBlk != lastReplacedBuff) {
 				Buffer buff = bufferPool[currBlk];
-				
+
 				// Get the lock of buffer if it is free
 				if (buff.getExternalLock().tryLock()) {
 					try {
 						if (!buff.isPinned()) {
 							this.lastReplacedBuff = currBlk;
-							
+							//System.out.println("Last Buf" + this.lastReplacedBuff);
+
 							// Swap
 							BlockId oldBlk = buff.block();
 							if (oldBlk != null)
@@ -212,7 +215,7 @@ class BufferPoolMgr {
 							blockMap.put(buff.block(), buff);
 							if (!buff.isPinned())
 								numAvailable.decrementAndGet();
-							
+
 							// Pin this buffer
 							buff.pin();
 							return buff;
